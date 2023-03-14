@@ -1,0 +1,501 @@
+diff --git a/yanas.py b/yanas.py
+index d4ea705..aa9fdbc 100644
+--- a/yanas.py
++++ b/yanas.py
+@@ -12,6 +12,7 @@ class Yan85Asm:
+         self.op = -1
+         self.arg1 = -1
+         self.arg2 = -1
++        self.mem = b"\x00"*256
+         for line in asmfile.readlines():
+             if line.startswith("."):
+                 self.parse_directive(line[1:])
+@@ -24,9 +25,9 @@ class Yan85Asm:
+             # Remove address info, if present
+             line = re.sub(r"^\s*.+:\s*", "", line).strip()
+             self.prog.append(line)
+-    
++
+     def parse_directive(self, line):
+-        tokens = line.split(" ")
++        tokens = [x.strip() for x in line.split()]
+         if tokens[0] == "REGISTER":
+             self.reg[tokens[1]] = int(tokens[2], 0)
+         elif tokens[0] == "FLAG":
+@@ -37,17 +38,23 @@ class Yan85Asm:
+             self.inst[tokens[1]] = int(tokens[2], 0)
+         elif tokens[0] == "ABI":
+             setattr(self, tokens[1].lower(), int(tokens[2], 0))
++        elif tokens[0] == "MEMORY":
++            self.mem = bytes([int(x, 16) for x in re.findall('..', tokens[1])])
++            self.mem += b"\x00"*(256-len(self.mem))
+         else:
+             print("Unrecognized directive: " + line)
+             sys.exit(-1)
+-    
++
+     def assemble(self, outfile):
++        outfile.write(b"\x50\x4b\x03\x04\x79\x85")
+         ret = []
+         for inst in self.prog:
+             inst = inst.replace("byte [", "byte[").split(" ", 1)
+             ret += getattr(self, inst[0])(inst[1])
+         outfile.write(bytes(ret))
+-    
++        outfile.write(b"\x00"*(768-len(ret)))
++        outfile.write(self.mem)
++
+     def Y_mov(self, args):
+         args = [x.strip() for x in args.split(",")]
+         ret = [0, 0, 0]
+@@ -77,7 +84,7 @@ class Yan85Asm:
+             return ret
+         print("Unrecognized instruction: Y_mov " + str(args))
+         sys.exit(-1)
+-        
++
+     def Y_add(self, args):
+         args = [x.strip() for x in args.split(",")]
+         ret = [0, 0, 0]
+@@ -89,29 +96,77 @@ class Yan85Asm:
+             return ret
+         print("Unrecognized instruction: Y_add " + str(args))
+         sys.exit(-1)
+-    
++
++    def Y_sub(self, args):
++        args = [x.strip() for x in args.split(",")]
++        ret = [0, 0, 0]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_sub r8, r8
++            ret[self.op] = self.inst["interpret_sub"]
++            ret[self.arg1] = self.reg[args[0]]
++            ret[self.arg2] = self.reg[args[1]]
++            return ret
++        print("Unrecognized instruction: Y_sub " + str(args))
++        sys.exit(-1)
++
++    def Y_xor(self, args):
++        args = [x.strip() for x in args.split(",")]
++        ret = [0, 0, 0]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_xor r8, r8
++            ret[self.op] = self.inst["interpret_xor"]
++            ret[self.arg1] = self.reg[args[0]]
++            ret[self.arg2] = self.reg[args[1]]
++            return ret
++        print("Unrecognized instruction: Y_xor " + str(args))
++        sys.exit(-1)
++
++    def Y_and(self, args):
++        args = [x.strip() for x in args.split(",")]
++        ret = [0, 0, 0]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_and r8, r8
++            ret[self.op] = self.inst["interpret_and"]
++            ret[self.arg1] = self.reg[args[0]]
++            ret[self.arg2] = self.reg[args[1]]
++            return ret
++        print("Unrecognized instruction: Y_and " + str(args))
++        sys.exit(-1)
++
++    def Y_or(self, args):
++        args = [x.strip() for x in args.split(",")]
++        ret = [0, 0, 0]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_or r8, r8
++            ret[self.op] = self.inst["interpret_or"]
++            ret[self.arg1] = self.reg[args[0]]
++            ret[self.arg2] = self.reg[args[1]]
++            return ret
++        print("Unrecognized instruction: Y_or " + str(args))
++        sys.exit(-1)
++
+     def Y_push(self, args):
+         args = [x.strip() for x in args.split(",")]
+         ret = [0, 0, 0]
+         if args[0] in self.reg:
+             ret[self.op] = self.inst["interpret_stk"]
+-            ret[self.arg1] = 0
++            ret[self.arg1] = 0x10
+             ret[self.arg2] = self.reg[args[0]]
+             return ret
+         print("Unrecognized instruction: Y_push " + str(args))
+         sys.exit(-1)
+-    
++
+     def Y_pop(self, args):
+         args = [x.strip() for x in args.split(",")]
+         ret = [0, 0, 0]
+         if args[0] in self.reg:
+             ret[self.op] = self.inst["interpret_stk"]
+-            ret[self.arg1] = self.reg[args[0]]
+-            ret[self.arg2] = 0
++            ret[self.arg1] = 0x20
++            ret[self.arg2] = self.reg[args[0]]
+             return ret
+         print("Unrecognized instruction: Y_pop " + str(args))
+         sys.exit(-1)
+-    
++
+     def Y_cmp(self, args):
+         args = [x.strip() for x in args.split(",")]
+         ret = [0, 0, 0]
+@@ -123,22 +178,79 @@ class Yan85Asm:
+         ret[self.arg1] = self.reg[args[0]]
+         ret[self.arg2] = self.reg[args[1]]
+         return ret
+-    
++
++    def Y_jmp(self, args):
++        args = args.strip()
++        if args[0] == '+':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_jmp +offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = 0b100000
++            ret[self.arg2] = int(args, 0)
++            return ret
++        elif args[0] == '-':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_jmp -offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = 0b100000
++            ret[self.arg2] = 0x100 - int(args, 0)
++            return ret
++        print("Absolute jump not supported: Y_jmp " + str(args))
++        sys.exit(-1)
++
++    def Y_je(self, args):
++        args = args.strip()
++        if args[0] == '+':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_je +offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = self.flag["eq"] | 0b100000
++            ret[self.arg2] = int(args, 0)
++            return ret
++        elif args[0] == '-':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_je -offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = self.flag["eq"] | 0b100000
++            ret[self.arg2] = 0x100 - int(args, 0)
++            return ret
++        print("Absolute jump not supported: Y_je " + str(args))
++        sys.exit(-1)
++
++    def Y_jne(self, args):
++        args = args.strip()
++        if args[0] == '+':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_jne +offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = self.flag["ne"] | 0b100000
++            ret[self.arg2] = int(args, 0)
++            return ret
++        elif args[0] == '-':
++            args = args[1:]
++            ret = [0, 0, 0]
++            # Y_jne -offset
++            ret[self.op] = self.inst["interpret_jmp"]
++            ret[self.arg1] = self.flag["ne"] | 0b100000
++            ret[self.arg2] = 0x100 - int(args, 0)
++            return ret
++        print("Absolute jump not supported: Y_jne " + str(args))
++        sys.exit(-1)
++
+     def Y_sys(self, args):
+         ret = [0, 0, 0]
+         sys_name = args.split("[")[1].split("]")[0][4:]
+-        if sys_name == "exit":
+-            ret[self.op] = self.inst["interpret_sys"]
+-            ret[self.arg1] = self.syscall[sys_name]
+-            ret[self.arg2] = self.reg["ya"] # doesn't matter anyways
+-            return ret
+-        dst = args.split("-->")[1].strip()
+-        if dst not in self.reg:
++        if sys_name not in self.syscall:
+             print("Unrecognized instruction: Y_sys " + str(args))
+             sys.exit(-1)
+         ret[self.op] = self.inst["interpret_sys"]
+         ret[self.arg1] = self.syscall[sys_name]
+-        ret[self.arg2] = self.reg[dst]
++        ret[self.arg2] = 0 # doesn't matter anyways
+         return ret
+ 
+ parser = argparse.ArgumentParser(description="yan85 assembler")
+diff --git a/yandb.py b/yandb.py
+index 64c1559..f7481f0 100644
+--- a/yandb.py
++++ b/yandb.py
+@@ -29,11 +29,14 @@ class Yan85:
+                 line = re.sub(r"^\s*.+:\s*", "", line).strip()
+                 self.prog.append(line)
+         self.reset()
+-    
++
+     def print_data(self):
+         print(colored("[----------------------------------registers-----------------------------------]", "blue"))
+         for reg, val in self.reg.items():
+-            print(colored(reg.ljust(4), "green") + ": " + hex(val))
++            if 32 <= val < 128:
++                print(colored(reg.ljust(4), "green") + ": " + hex(val) + " ('" + chr(val) + "')")
++            else:
++                print(colored(reg.ljust(4), "green") + ": " + hex(val))
+         print(colored("flags", "green") + ":", end='')
+         for flag, val in self.flags.items():
+             if val:
+@@ -61,7 +64,7 @@ class Yan85:
+         print(colored("[------------------------------------stack-------------------------------------]", "blue"))
+         for i in range(self.reg["ystk"], max(-1, self.reg["ystk"]-8), -1):
+             print(hex(i).rjust(8) + ": " + hex(self.mem[i]))
+-    
++
+     def reset(self):
+         self.mem = self.init_mem.copy()
+         self.reg = {}
+@@ -75,7 +78,7 @@ class Yan85:
+         self.fd = [sys.stdin, sys.stdout.buffer, sys.stderr.buffer]
+         self.exited = False
+         self.exit_code = 0
+-    
++
+     def step(self):
+         if self.exited:
+             return False
+@@ -93,7 +96,7 @@ class Yan85:
+             return False
+         self.reg["yip"] += 1
+         return True
+-    
++
+     def read_str(self, loc, lim=5000):
+         og_loc = loc
+         x = b''
+@@ -101,7 +104,7 @@ class Yan85:
+             x += self.mem[loc].to_bytes(1, 'little')
+             loc += 1
+         return x
+-    
++
+     def Y_mov(self, args):
+         args = [x.strip() for x in args.split(",")]
+         if args[0] in self.reg and re.fullmatch(r"(0x[a-fA-F0-9]+)|(\d+)", args[1]):
+@@ -126,7 +129,7 @@ class Yan85:
+             if args[0] == 'yip': self.reg[args[0]] -= 1
+             return True
+         return False
+-        
++
+     def Y_add(self, args):
+         args = [x.strip() for x in args.split(",")]
+         if args[0] in self.reg and args[1] in self.reg:
+@@ -134,7 +137,7 @@ class Yan85:
+             self.reg[args[0]] += self.reg[args[1]]
+             return True
+         return False
+-    
++
+     # Undocumented but useful
+     def Y_sub(self, args):
+         args = [x.strip() for x in args.split(",")]
+@@ -143,7 +146,31 @@ class Yan85:
+             self.reg[args[0]] -= self.reg[args[1]]
+             return True
+         return False
+-    
++
++    def Y_xor(self, args):
++        args = [x.strip() for x in args.split(",")]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_xor r8, r8
++            self.reg[args[0]] ^= self.reg[args[1]]
++            return True
++        return False
++
++    def Y_and(self, args):
++        args = [x.strip() for x in args.split(",")]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_and r8, r8
++            self.reg[args[0]] &= self.reg[args[1]]
++            return True
++        return False
++
++    def Y_or(self, args):
++        args = [x.strip() for x in args.split(",")]
++        if args[0] in self.reg and args[1] in self.reg:
++            # Y_or r8, r8
++            self.reg[args[0]] |= self.reg[args[1]]
++            return True
++        return False
++
+     def Y_push(self, args):
+         args = [x.strip() for x in args.split(",")]
+         if args[0] in self.reg:
+@@ -151,7 +178,7 @@ class Yan85:
+             self.mem[self.reg["ystk"]] = self.reg[args[0]]
+             return True
+         return False
+-    
++
+     def Y_pop(self, args):
+         args = [x.strip() for x in args.split(",")]
+         if args[0] in self.reg:
+@@ -159,7 +186,7 @@ class Yan85:
+             self.reg["ystk"] -= 1
+             return True
+         return False
+-    
++
+     def Y_cmp(self, args):
+         args = [x.strip() for x in args.split(",")]
+         if args[0] not in self.reg or args[1] not in self.reg:
+@@ -180,82 +207,28 @@ class Yan85:
+         if reg1 == reg2 and reg1 == 0:
+             self.flags["bz"] = True
+         return True
+-    
++
+     def Y_jmp(self, args):
+         args = [x.strip() for x in args.split(",")]
+-        if re.fullmatch(r"(0x[a-fA-F0-9]+)|(\d+)", args[0]):
+-            # Y_jmp imm8
+-            self.reg["yip"] = int(args[0], 0) - 1
+-            return True
+-        if args[0] in self.reg:
+-            # Y_jmp r8
+-            self.reg["yip"] = self.reg[args[0]] - 1
++        if re.fullmatch(r"[\+\-]\d+", args[0]):
++            # Y_jmp +imm8
++            self.reg["yip"] += int(args[0])
+             return True
+         return False
+-    
+-    def Y_jg(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["gt"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
+-    def Y_jge(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["gt"] or self.flags["eq"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
+-    def Y_jl(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["lt"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
+-    def Y_jle(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["lt"] or self.flags["eq"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
++
+     def Y_je(self, args):
+         args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["eq"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
+-    def Y_jne(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["ne"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
+-        return True
+-    
+-    def Y_jbz(self, args):
+-        args = [x.strip() for x in args.split(",")]
+-        if args[0] not in self.reg:
+-            return False
+-        if self.flags["bz"]:
+-            self.reg["yip"] = self.reg[args[0]] - 1
++        if self.flags["eq"] and re.fullmatch(r"[\+\-]\d+", args[0]):
++            self.reg["yip"] += int(args[0])
+         return True
+-    
++
+     def Y_sys(self, args):
+         sys_name = args.split("[")[1].split("]")[0]
+         if sys_name == "sys_exit":
+             self.exit_code = self.reg["ya"]
+             self.exited = True
+             return True
+-        dst = args.split("-->")[1].strip()
++        dst = "yd"
+         if dst not in self.reg:
+             return False
+         if sys_name == "sys_read":
+@@ -280,21 +253,6 @@ class Yan85:
+             self.fd[fd].write(bytes(self.mem[buf:buf+rlen]))
+             self.reg[dst] = rlen
+             return True
+-        if sys_name == "sys_open":
+-            ptr = self.reg["ya"]
+-            filename = b''
+-            while True:
+-                x = self.mem[ptr]
+-                if x == 0x00: break
+-                filename += x.to_bytes(1, 'little')
+-                ptr += 1
+-            filename = filename.decode("utf-8")
+-            if filename == "/flag":
+-                self.fd.append(io.BytesIO(b"pwn.college{practice}"))
+-            else:
+-                self.fd.append(open(filename, 'rb'))
+-            self.reg[dst] = len(self.fd) - 1
+-            return True
+         return False
+ 
+ os.system("color")
+@@ -319,10 +277,10 @@ def run_continuous():
+         if file.reg["yip"] in breaks:
+             file.print_data()
+             return
+-        
++
+         # Step
+         res = file.step()
+-        
++
+         # Return if something bad happened
+         if not res:
+             file.print_data()
+@@ -344,13 +302,13 @@ starti:   reset to start of binary and start the program"""
+ while True:
+     if file.exited:
+         print(f"Program exited with exit code {file.exit_code}")
+-        
++
+     cmd = input(colored("yandb> ", "red"))
+     if cmd == "":
+         cmd = prev
+     else:
+         prev = cmd
+-    
++
+     # Command processing
+     if cmd == "help":
+         print(help_msg)

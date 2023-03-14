@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Results</title>
+    <%- include('style') %>
+</head>
+
+<body>
+    <div>
+        <h2>
+            Search Results
+        </h2>
+        <p>
+            <!-- {"name": "", "description": "", "skinid": "", "price": 0, "image": "url"} -->
+            <p>Skin Name: <%=skin?.name ?? ""%></p>
+            <p>Skin Description: <%=skin?.description ?? ""%></p>
+            <p>Skin ID: <%=skin?.skinid ?? ""%></p>
+            <p>Price: <%=skin?.price ?? ""%> <img style="height:20px;" src="https://static.wikia.nocookie.net/brawlstars/images/7/7d/Icon-Gem.png"></img></p>
+            <img src="<%=skin?.image ?? ""%>">
+        </p>
+    </div>
+</body>
+
+</html>

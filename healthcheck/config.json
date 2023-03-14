@@ -1,0 +1,103 @@
+{
+  "instancer": {
+    "session": "[REDACTED]",
+    "host": "https://ctf.mcpt.ca"
+  },
+  "challs": {
+    "pwn1": {
+      "instancer": true,
+      "slug": "wxmpwn1"
+    },
+    "backup_pwn1": {
+      "instancer": false,
+      "host": "pwna.jonathanw.dev",
+      "port": 4001
+    },
+    "pwn2": {
+      "instancer": true,
+      "slug": "wxmpwn2"
+    },
+    "backup_pwn2": {
+      "instancer": false,
+      "host": "pwna.jonathanw.dev",
+      "port": 4002
+    },
+    "pwn3": {
+      "instancer": false,
+      "host": "toady.nyiyui.ca",
+      "port": 2003
+    },
+    "backup_pwn3": {
+      "instancer": false,
+      "host": "pwnb.jonathanw.dev",
+      "port": 4003
+    },
+    "pwn4": {
+      "instancer": false,
+      "host": "toady.nyiyui.ca",
+      "port": 2000
+    },
+    "backup_pwn4": {
+      "instancer": false,
+      "host": "pwnb.jonathanw.dev",
+      "port": 4004
+    },
+    "pwn5": {
+      "instancer": false,
+      "host": "pwnb.jonathanw.dev",
+      "port": 4005,
+      "disabled": true
+    },
+    "pwncrypto5": {
+      "instancer": false,
+      "host": "toady.nyiyui.ca",
+      "port": 2002
+    },
+    "backup_pwncrypto5": {
+      "instancer": false,
+      "host": "pwnb.jonathanw.dev",
+      "port": 4006,
+      "disabled": true
+    },
+    "web1": {
+      "instancer": false,
+      "host": "weba.jonathanw.dev",
+      "port": 3001
+    },
+    "web2": {
+      "instancer": false,
+      "host": "weba.jonathanw.dev",
+      "port": 3002
+    },
+    "web3": {
+      "instancer": true,
+      "slug": "wxmweb3",
+      "disabled": true
+    },
+    "web4": {
+      "instancer": true,
+      "slug": "wxmweb4"
+    },
+    "backup_web4": {
+      "instancer": false,
+      "host": "weba.jonathanw.dev",
+      "port": 3004
+    },
+    "crypto5": {
+      "instancer": false,
+      "host": "toady.nyiyui.ca",
+      "port": 2001
+    },
+    "misc3": {
+      "instancer": false,
+      "host": "weba.jonathanw.dev",
+      "port": 3050,
+      "disabled": true
+    },
+    "crypto2": {
+      "instancer": false,
+      "host": "a",
+      "port": 1
+    }
+  }
+}
