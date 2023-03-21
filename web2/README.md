@@ -1,0 +1,3 @@
+# Restricted Access
+
+Legend has it that WLMAC has a super duper secret website, currently being used to plot attacks against MGCI...

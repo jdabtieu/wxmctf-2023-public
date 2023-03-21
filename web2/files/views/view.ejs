@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SUPER SECRET WLMAC SITE</title>
+    <style>
+        * {
+            font-family: sans-serif;
+        }
+
+        body {
+            max-width: 1200px;
+            padding: 20px;
+            margin: auto;
+        }
+
+        h1 {
+            line-height: 1em;
+        }
+
+        input,
+        button,
+        textarea {
+            padding: 5px;
+            font-size: 17px;
+            border: 1px solid gray;
+        }
+
+        form {
+            line-height: 1em;
+        }
+
+        hr {
+            border: 0;
+            border-top: 1px solid gray;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Welcome to the SUPER SECRET WLMAC SITE</h1>
+    <% if(!flag) { %> 
+        <h3>But wait...<%= message %> </h3>
+    <% } else { %> 
+        <h3>
+            Congrats! <%= message %>
+        </h3>
+    <% } %> 
+</body>
+
+</html>
