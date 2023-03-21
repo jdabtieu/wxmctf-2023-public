@@ -1,0 +1,2 @@
+history.pushState("", "", "/");
+// Prevent hacking!
