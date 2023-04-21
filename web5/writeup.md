@@ -1,4 +1,4 @@
-Check out duckrice404's writeup here: <https://deyixtan.github.io/posts/wxmctf2023/web4-brawl-shopping-spree/>
+Check out duckrice404's writeup here: <https://deyixtan.github.io/posts/wxmctf2023/web5-ourspace/>
 
 Environment variables needed: 
 `FLAG=wxmctf{theflag}`
